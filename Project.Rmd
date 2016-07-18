@@ -1,0 +1,93 @@
+---
+title: "Project Practical Machine Learning"
+author: "Robero Parra"
+date: "17 de julio de 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=TRUE,warning=FALSE,message=FALSE)
+```
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Libraries
+
+```{r library}
+library(caret)
+library(randomForest)
+```
+
+## Load Data
+
+The training data for this project are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
+
+The test data are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+```{r data}
+url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+train1<-read.csv(url,na.strings = c("NA", ""))
+url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+test1<-read.csv(url,na.strings = c("NA", ""))
+```
+
+## Cleaning Data
+
+```{r clean}
+dim(train1)
+dim(test1)
+# Removing columns full of NA.
+train2 <- train1[, colSums(is.na(train1)) == 0] 
+test2 <- test1[, colSums(is.na(test1)) == 0]
+# Removing the first 7 variables, since they are irrelevant (non-predictors)
+train2<-train2[-c(1:7)]
+test2<-test2[-c(1:7)]
+dim(train2)
+dim(test2)
+```
+
+## Preparing for training
+
+```{r prepar}
+TrainId <- createDataPartition(y = train2$classe, p = 0.7, list = FALSE)
+training <- train2[TrainId, ]
+validation <- train2[-TrainId, ]
+```
+
+## Training Model
+
+We will be using a Random Forest model to classify each instance in the dataset. Additionally we will be using k-Fold Cross Validation with k=10.
+
+```{r train}
+set.seed(2030)
+folder <- trainControl(method="cv", 10)
+RF_model <- train(classe ~ ., data=training, method="rf", trControl=folder, ntree=250)
+```
+
+
+# Making Predictions
+
+Here we do so and print out the resulting confusion matrix.
+
+```{r predict}
+preds <- predict(RF_model, validation)
+confusionMatrix(preds,validation$classe)
+```
+
+As we can see from the confusion matrix, the model performed extremely well, correctly classifying 99.39% of the testing data.
+
+```{r tester}
+myPredictors <- names(train2)
+myPredictors <- myPredictors[myPredictors!= "classe"]
+subTest <- test2[,myPredictors]
+predsSub <- predict(RF_model, subTest)
+predsSub
+```
+
+
